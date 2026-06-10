@@ -1,0 +1,10 @@
+# Database & API
+motor
+certifi
+
+# Server
+fastapi
+uvicorn
+
+# Utilities
+python-dotenv
