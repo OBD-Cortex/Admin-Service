@@ -30,8 +30,8 @@ MONGO_URI = os.getenv("MONGO_URI")
 
 
 
-# MOBILE_API_KEY: Secure token header used to validate incoming Flutter client requests.
-MOBILE_API_KEY = os.getenv("MOBILE_API_KEY")
+# ADMIN_JWT_SECRET: Shared HS256 secret to secure communication with Admin Dashboard.
+ADMIN_JWT_SECRET = os.getenv("ADMIN_JWT_SECRET")
 
 # JWT_SECRET: Secret key used for signing JWT authentication tokens.
 # SECURITY: Must be >= 32 characters in production.

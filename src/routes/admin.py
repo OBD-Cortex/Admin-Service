@@ -6,12 +6,12 @@ from fastapi import APIRouter, HTTPException, Depends, Query
 from pydantic import BaseModel
 
 from core.database import col_devices, col_users, col_knowledge
-from core.auth import verify_api_key
+from core.auth import verify_admin_jwt
 
 router = APIRouter(
     prefix="/api/admin",
     tags=["Admin Dashboard"],
-    dependencies=[Depends(verify_api_key)]
+    dependencies=[Depends(verify_admin_jwt)]
 )
 
 class GenerateDevicesRequest(BaseModel):

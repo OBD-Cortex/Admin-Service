@@ -12,10 +12,9 @@ Security Hardening Applied:
 """
 
 import logging
-import hmac
-from fastapi import HTTPException, Security
-from fastapi.security import APIKeyHeader
-from core.config import MOBILE_API_KEY
+from fastapi import HTTPException, Header, Security
+from core.config import ADMIN_JWT_SECRET
+from core.jwt_native import decode_jwt, JWTError, JWTExpiredError
 
 logger = logging.getLogger(__name__)
 
@@ -25,29 +24,34 @@ logger = logging.getLogger(__name__)
 # Enforce minimum secret lengths to prevent weak keys.
 _MIN_SECRET_LENGTH = 32
 
-if MOBILE_API_KEY and len(MOBILE_API_KEY) < _MIN_SECRET_LENGTH:
+if ADMIN_JWT_SECRET and len(ADMIN_JWT_SECRET) < _MIN_SECRET_LENGTH:
     logger.warning(
-        f"[!] MOBILE_API_KEY is only {len(MOBILE_API_KEY)} characters. "
+        f"[!] ADMIN_JWT_SECRET is only {len(ADMIN_JWT_SECRET)} characters. "
         f"Minimum recommended length is {_MIN_SECRET_LENGTH}."
     )
 
 
-# Removed unused auth methods
-
-
-api_key_header = APIKeyHeader(name="X-API-Key", auto_error=True)
-
-def verify_api_key(api_key: str = Security(api_key_header)):
-    """Verifies the API key using timing-safe comparison to prevent timing attacks."""
-    if not MOBILE_API_KEY:
-        logger.error("[!] MOBILE_API_KEY is not configured")
+def verify_admin_jwt(authorization: str = Header(..., alias="Authorization")) -> dict:
+    """Verifies the Admin HS256 JWT from the Authorization header."""
+    if not ADMIN_JWT_SECRET:
+        logger.error("[!] ADMIN_JWT_SECRET is not configured")
         raise HTTPException(status_code=500, detail="Server misconfiguration")
 
-    # SECURITY: hmac.compare_digest prevents timing-based key extraction
-    if not hmac.compare_digest(api_key.encode("utf-8"), MOBILE_API_KEY.encode("utf-8")):
-        logger.warning(f"[!] Invalid API key attempt (key length: {len(api_key)})")
-        raise HTTPException(status_code=403, detail="Invalid API Key")
-    return api_key
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Authorization header must start with 'Bearer '")
 
-
-# Removed unused edge device auth methods
+    token = authorization[7:]
+    
+    try:
+        payload = decode_jwt(
+            token, 
+            secret=ADMIN_JWT_SECRET,
+            issuer="obd-cortex-admin",
+            audience="obd-cortex-admin-api"
+        )
+        return payload
+    except JWTExpiredError:
+        raise HTTPException(status_code=401, detail="Token has expired")
+    except JWTError as e:
+        logger.warning(f"[!] Invalid Admin JWT attempt: {e}")
+        raise HTTPException(status_code=403, detail="Invalid Token")
