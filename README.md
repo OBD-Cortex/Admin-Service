@@ -1,29 +1,54 @@
-# OBD-Cortex: Admin Service
+# OBD-Cortex: Administration Service
 
-The **Admin Service** is a lightweight, secure FastAPI backend dedicated entirely to servicing the `Admin-Dashboard` frontend. It handles critical administrative actions such as device generation, telemetry monitoring, and triggering manual ingestion jobs.
+The **Admin Service** is a secure FastAPI backend designed exclusively to handle management tasks triggered by Server Actions on the `Admin-Dashboard` web frontend.
 
-## Architecture Overview
+---
 
-1. **Decoupled Security**: This service sits entirely isolated from edge device traffic and mobile app user traffic. Authentication is strictly handled via an internal `MOBILE_API_KEY` injected by the Next.js dashboard proxy.
-2. **Resource Efficiency**: Purged of heavy websocket connections and bloated rate-limiting libraries, this service strictly exposes RESTful endpoints, scaling independently of the high-traffic RAG engine.
-3. **Database Architecture**: Connects to the centralized MongoDB Atlas cluster via `core/database.py`. All indexes and connection handling are encapsulated cleanly in the application startup events.
+## Service Architecture
+
+1.  **Administrative Control Plane:** Exposes RESTful endpoints for generating hardware tokens, pairing devices, clearing/viewing knowledge manuals, and tracking fleet stats.
+2.  **Isolated Authentication:** Bypasses public traffic completely. All administrative endpoints are guarded via a secure `MOBILE_API_KEY` header verification in `src/core/auth.py`.
+3.  **Stateless API Design:** Stripped of heavy websocket engines, UI layout rendering, or rate-limiting filters (which are pushed to `MobileApp_Service` and `Admin-Dashboard`), maximizing execution speed and minimizing VPS memory usage.
+4.  **Database Connection:** Interacts with the shared MongoDB Atlas collections `devices`, `users`, and `knowledge` via the async driver Motor.
+5.  **No Version Pins:** `requirements.txt` lists unpinned packages (e.g. `fastapi`, `motor`) to automatically download the latest stable versions during deployment.
+
+---
 
 ## Repository Structure
 
-- `src/core/`: Configuration, database handles, and foundational utilities.
-- `src/routes/`: FastAPI routing definitions for administrative actions (e.g., `admin.py`).
-- `src/main_api.py`: The root Uvicorn entrypoint for the service.
-- `systemd/`: Contains the daemon deployment configurations for Linux hosts.
+*   `src/core/auth.py`: Implements API Key verification for proxy authentication.
+*   `src/core/database.py`: Handles client connections and collections handles.
+*   `src/routes/admin.py`: Administrative APIs (stats calculation, device provisioning, metadata pairing).
+*   `src/main_api.py`: Uvicorn runner and middleware setups.
+*   `systemd/`: Contains the service configuration templates.
 
-## Local Development (Quick Start)
+---
 
-To run this backend service locally for development or API testing:
-1. Ensure **Python 3.10+** is installed.
-2. Create and activate a virtual environment: `python -m venv venv && source venv/bin/activate`
-3. Install dependencies: `pip install -r requirements.txt`
-4. Copy the environment variables: `cp .env.example .env` and fill in your MongoDB URI.
-5. Start the development server with hot-reloading: `uvicorn src.main_api:app --reload`
+## Local Development Setup
 
-## Deployment
+To run this backend locally:
+1.  Verify **Python 3.10+** is installed.
+2.  Initialize virtual environment:
+    ```bash
+    python -m venv venv && source venv/bin/activate
+    ```
+3.  Install dependencies:
+    ```bash
+    pip install -r requirements.txt
+    ```
+4.  Copy environment variables:
+    ```bash
+    cp .env.example .env
+    ```
+5.  Configure your MongoDB URI and API keys inside `.env`.
+6.  Start development server:
+    ```bash
+    uvicorn src.main_api:app --reload
+    ```
 
-Please refer to `DEPLOYMENT.md` for a comprehensive, production-grade deployment guide on DigitalOcean using Nginx, Certbot, and Fish.
+---
+
+## Deployment Guide
+
+*   Refer to [DEPLOYMENT.md](file:///home/bodz/OBD-Cortex/Admin_Service/DEPLOYMENT.md) for Nginx configs, systemd templates, and UFW security rules.
+
