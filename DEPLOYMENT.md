@@ -23,9 +23,6 @@ MONGO_URI=mongodb+srv://user:pass@cluster.mongodb.net/?retryWrites=true&w=majori
 # JWT HS256 Shared Secret for secure Server-to-Server Admin Dashboard communication (minimum 32 characters)
 ADMIN_JWT_SECRET=your_32_byte_hex_secret_here
 
-# Optional: JWT Secret for signing local tokens (minimum 32 characters)
-JWT_SECRET=your_fallback_32_byte_jwt_secret_here
-
 # Comma-separated list of allowed CORS origins (e.g., frontend dashboard URL)
 CORS_ORIGINS=https://admin.yourdomain.com
 ```

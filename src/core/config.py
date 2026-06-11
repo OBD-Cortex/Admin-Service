@@ -33,10 +33,6 @@ MONGO_URI = os.getenv("MONGO_URI")
 # ADMIN_JWT_SECRET: Shared HS256 secret to secure communication with Admin Dashboard.
 ADMIN_JWT_SECRET = os.getenv("ADMIN_JWT_SECRET")
 
-# JWT_SECRET: Secret key used for signing JWT authentication tokens.
-# SECURITY: Must be >= 32 characters in production.
-JWT_SECRET = os.getenv("JWT_SECRET")
-
 # CORS_ORIGINS: Comma-separated list of allowed CORS origins.
 # SECURITY: Must be explicitly set in production. Do NOT use "*".
 # Example: "https://admin.example.com,https://app.example.com"
