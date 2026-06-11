@@ -14,11 +14,20 @@ This guide outlines the production-ready deployment strategy for the Admin Servi
 
 ## Environment Variables
 
-Create a `.env` file containing the following:
+Create a `.env` file containing the following environment variables. Ensure that `ADMIN_JWT_SECRET` is a secure 32-byte hexadecimal string shared with the Admin Dashboard.
 
 ```env
+# Your MongoDB Atlas Connection String
 MONGO_URI=mongodb+srv://user:pass@cluster.mongodb.net/?retryWrites=true&w=majority
-MOBILE_API_KEY=your_secure_backend_api_key_here
+
+# JWT HS256 Shared Secret for secure Server-to-Server Admin Dashboard communication (minimum 32 characters)
+ADMIN_JWT_SECRET=your_32_byte_hex_secret_here
+
+# Optional: JWT Secret for signing local tokens (minimum 32 characters)
+JWT_SECRET=your_fallback_32_byte_jwt_secret_here
+
+# Comma-separated list of allowed CORS origins (e.g., frontend dashboard URL)
+CORS_ORIGINS=https://admin.yourdomain.com
 ```
 
 ---

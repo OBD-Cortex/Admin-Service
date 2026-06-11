@@ -7,7 +7,7 @@ The **Admin Service** is a secure FastAPI backend designed exclusively to handle
 ## Service Architecture
 
 1.  **Administrative Control Plane:** Exposes RESTful endpoints for generating hardware tokens, pairing devices, clearing/viewing knowledge manuals, and tracking fleet stats.
-2.  **Isolated Authentication:** Bypasses public traffic completely. All administrative endpoints are guarded via a secure `MOBILE_API_KEY` header verification in `src/core/auth.py`.
+2.  **Isolated Authentication:** Bypasses public traffic completely. All administrative endpoints are guarded via a secure HS256 JWT `Authorization` header verification using `ADMIN_JWT_SECRET` in `src/core/auth.py`.
 3.  **Stateless API Design:** Stripped of heavy websocket engines, UI layout rendering, or rate-limiting filters (which are pushed to `MobileApp_Service` and `Admin-Dashboard`), maximizing execution speed and minimizing VPS memory usage.
 4.  **Database Connection:** Interacts with the shared MongoDB Atlas collections `devices`, `users`, and `knowledge` via the async driver Motor.
 5.  **No Version Pins:** `requirements.txt` lists unpinned packages (e.g. `fastapi`, `motor`) to automatically download the latest stable versions during deployment.
