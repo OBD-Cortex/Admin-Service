@@ -112,4 +112,10 @@ async def init_db():
     except Exception as e:
         logger.warning(f"[!] Warning: Could not create unique index on col_devices.device_id: {e}")
 
+    # Create index on created_at for fast sorting
+    try:
+        await col_devices.create_index([("created_at", -1)])
+    except Exception as e:
+        logger.warning(f"[!] Warning: Could not create index on col_devices.created_at: {e}")
+
     logger.info("[✓] Database Indexes Verified.")

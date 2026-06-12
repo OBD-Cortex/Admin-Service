@@ -156,7 +156,7 @@ async def list_knowledge():
         for d in docs
     ]}
 
-@router.delete("/knowledge/{source}")
+@router.delete("/knowledge/{source:path}")
 async def delete_knowledge(source: str):
     """Deletes all chunks for a given source document from the knowledge base."""
     result = await col_knowledge.delete_many({"source": source})

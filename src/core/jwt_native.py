@@ -16,7 +16,7 @@ def _b64url_encode(data: bytes) -> str:
 
 def _b64url_decode(data: str) -> bytes:
     """Decodes base64url string to bytes."""
-    padding = '=' * (4 - (len(data) % 4))
+    padding = '=' * ((4 - len(data) % 4) % 4)
     return base64.urlsafe_b64decode(data + padding)
 
 def encode_jwt(payload: dict, secret: str) -> str:

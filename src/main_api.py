@@ -93,6 +93,7 @@ app.add_middleware(
     allow_credentials=False,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "X-API-Key", "X-Device-Token", "X-Device-ID", "X-Signature", "X-Timestamp", "Content-Type"],
+    expose_headers=["X-Request-ID"],
 )
 
 @app.get("/api/health")

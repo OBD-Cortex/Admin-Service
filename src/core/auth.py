@@ -12,6 +12,7 @@ Security Hardening Applied:
 """
 
 import logging
+from typing import Optional
 from fastapi import HTTPException, Header, Security
 from core.config import ADMIN_JWT_SECRET
 from core.jwt_native import decode_jwt, JWTError, JWTExpiredError
@@ -31,11 +32,14 @@ if ADMIN_JWT_SECRET and len(ADMIN_JWT_SECRET) < _MIN_SECRET_LENGTH:
     )
 
 
-def verify_admin_jwt(authorization: str = Header(..., alias="Authorization")) -> dict:
+def verify_admin_jwt(authorization: Optional[str] = Header(None, alias="Authorization")) -> dict:
     """Verifies the Admin HS256 JWT from the Authorization header."""
     if not ADMIN_JWT_SECRET:
         logger.error("[!] ADMIN_JWT_SECRET is not configured")
         raise HTTPException(status_code=500, detail="Server misconfiguration")
+
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Missing Authorization header")
 
     if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Authorization header must start with 'Bearer '")
