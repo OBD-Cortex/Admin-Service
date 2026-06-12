@@ -116,7 +116,7 @@ async def health_endpoint():
 # Serve the web interface if navigated to in a browser
 static_dir = os.path.join(os.path.dirname(__file__), "web-app")
 os.makedirs(static_dir, exist_ok=True) 
-app.mount("/", StaticFiles(directory=static_dir, html=True), name="static")
+app.mount("/test-app", StaticFiles(directory=static_dir, html=True), name="static")
 
 if __name__ == "__main__":
     logger.info("="*60)
