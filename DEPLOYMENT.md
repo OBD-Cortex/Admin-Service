@@ -8,7 +8,7 @@ This guide outlines the production-ready deployment strategy for the Admin Servi
 
 > [!WARNING]
 > **Strict Port Isolation:** The Uvicorn app processes execute on port `8000` bound to the local loopback interface `127.0.0.1`.
-> **You must configure UFW to drop external incoming traffic to port 8000.** Let external clients access port 8000 directly bypasses the reverse proxy, leaving endpoints exposed. Only ports 80 (HTTP) and 443 (HTTPS) must be allowed externally.
+> **You must configure UFW to drop external incoming traffic to port 8000.** Letting external clients access port 8000 directly bypasses the reverse proxy, leaving endpoints exposed. Only ports 80 (HTTP) and 443 (HTTPS) must be allowed externally.
 
 ---
 
@@ -58,7 +58,7 @@ chmod 600 /home/admin-service/.ssh/authorized_keys
 To ensure system stability during heavy processes:
 
 ```bash
-sudo fallocate -l 2G /swapfile
+sudo dd if=/dev/zero of=/swapfile bs=1M count=2048 status=progress
 sudo chmod 600 /swapfile
 sudo mkswap /swapfile
 sudo swapon /swapfile
@@ -91,7 +91,7 @@ To streamline the environment, add the following to `~/.config/fish/config.fish`
 
 ```fish
 set -g fish_greeting
-set -gx ENV_PATH "/home/admin-service/Admin_Service/.env"
+set -gx ENV_PATH "/home/admin-service/Admin-Service/.env"
 set -gx TERM xterm-256color
 ```
 
@@ -113,7 +113,7 @@ Define the custom log format in `/etc/nginx/nginx.conf` (inside the `http { ... 
 Configure Nginx (`sudo nvim /etc/nginx/sites-available/Admin-Service`):
 
 ```nginx
-limit_req_zone $binary_remote_addr zone=api_limit:10m rate=10r/s;
+limit_req_zone $binary_remote_addr zone=admin_limit:10m rate=10r/s;
 
 server {
     server_name admin.yourdomain.com;
@@ -126,7 +126,7 @@ server {
     client_max_body_size 50M;
 
     location / {
-        limit_req zone=api_limit burst=20 nodelay;
+        limit_req zone=admin_limit burst=20 nodelay;
 
         proxy_pass http://127.0.0.1:8000;
         proxy_set_header Host $host;
@@ -175,7 +175,7 @@ sudo ufw allow 'Nginx Full'
 sudo ufw --force enable
 
 # Obtain SSL Certificate
-sudo certbot --nginx -d admin.yourdomain.com
+sudo certbot --nginx -d admin.yourdomain.com --register-unsafely-without-email
 
 # Revert firewall to HTTPS only by allowing 'Nginx HTTPS' and deleting 'Nginx Full'
 sudo ufw allow 'Nginx HTTPS'
@@ -199,5 +199,5 @@ Verify the configuration:
 sudo ufw status verbose
 ```
 
-To run the application persistently, refer to the provided `systemd/Admin_Service.service` template.
+To run the application persistently, refer to the provided `systemd/Admin-Service.service` template.
 

@@ -1,0 +1,16 @@
+[Unit]
+Description=OBD-Cortex Admin Service (FastAPI)
+After=network.target
+
+[Service]
+User=admin-service
+Group=admin-service
+WorkingDirectory=/home/admin-service/Admin-Service
+Environment="PATH=/home/admin-service/Admin-Service/venv/bin"
+ExecStart=/home/admin-service/Admin-Service/venv/bin/uvicorn main_api:app --app-dir src --host 127.0.0.1 --port 8000 --workers 1
+
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
