@@ -5,7 +5,6 @@ import logging
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 from contextlib import asynccontextmanager
 
@@ -110,14 +109,6 @@ async def health_endpoint():
         "status": "ok" if db_status == "connected" else "degraded",
         "database": db_status
     }
-
-# ==========================================
-# STATIC FILES
-# ==========================================
-# Serve the web interface if navigated to in a browser
-static_dir = os.path.join(os.path.dirname(__file__), "web-app")
-os.makedirs(static_dir, exist_ok=True) 
-app.mount("/test-app", StaticFiles(directory=static_dir, html=True), name="static")
 
 if __name__ == "__main__":
     logger.info("="*60)
