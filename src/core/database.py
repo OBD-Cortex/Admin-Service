@@ -50,6 +50,7 @@ db = client["rag_db"]
 col_knowledge = db["knowledge"]             # Vector-embedded repair manuals & DTC docs
 col_devices = db["devices"]                 # Pi device registration & owner pairing
 col_users = db["users"]                     # Mobile app user accounts
+col_jobs = db["jobs"]                       # Background processing tasks (ingestion)
 
 async def init_db():
     """Asynchronously initialize database indexes and verify connection."""

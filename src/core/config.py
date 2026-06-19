@@ -33,8 +33,5 @@ MONGO_URI = os.getenv("MONGO_URI")
 # ADMIN_JWT_SECRET: Shared HS256 secret to secure communication with Admin Dashboard.
 ADMIN_JWT_SECRET = os.getenv("ADMIN_JWT_SECRET")
 
-# CORS_ORIGINS: Comma-separated list of allowed CORS origins.
-# SECURITY: Must be explicitly set in production. Do NOT use "*".
-# Example: "https://admin.example.com,https://app.example.com"
-CORS_ORIGINS = os.getenv("CORS_ORIGINS", "")
-
+# LLAMA_INDEX_API_KEY: LlamaCloud API Key for intelligent PDF ingestion
+LLAMA_INDEX_API_KEY = os.getenv("LLAMA_INDEX_API_KEY")

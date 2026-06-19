@@ -34,7 +34,9 @@ app = FastAPI(
 # Mount admin application router
 app.include_router(admin_router)
 
-
+# Mount ingest router
+from routes.ingest import router as ingest_router
+app.include_router(ingest_router)
 # ----------------------------------------------------------
 # SECURITY: Request ID Middleware
 # ----------------------------------------------------------

@@ -5,6 +5,12 @@ certifi
 # Server
 fastapi
 uvicorn
+python-multipart
+
+# AI & Text Processing
+sentence-transformers
+llama-cloud
 
 # Utilities
 python-dotenv
+polars
