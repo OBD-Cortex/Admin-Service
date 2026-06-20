@@ -94,7 +94,7 @@ async def ingest_pdf(filepath: str, filename: str, job_id: str = None) -> dict:
                 await update_job_status(job_id, "processing", f"Vectorizing pages ({processed}/{total_pages})...")
                 
                 texts = [doc["text"] for doc in sub_batch]
-                vectors = embed_model.encode(texts)
+                vectors = await run_in_threadpool(embed_model.encode, texts)
                 vectors = vectors.tolist()
                 
                 for doc, vector in zip(sub_batch, vectors):
@@ -144,7 +144,7 @@ async def ingest_csv(filepath: str, filename: str, job_id: str = None) -> dict:
                 processed = index + 1
                 await update_job_status(job_id, "processing", f"Vectorizing CSV rows ({processed}/{total_rows})...")
                 texts = [doc["text"] for doc in batch_docs]
-                vectors = embed_model.encode(texts)
+                vectors = await run_in_threadpool(embed_model.encode, texts)
                 vectors = vectors.tolist()
                 
                 for doc, vector in zip(batch_docs, vectors):
@@ -158,7 +158,7 @@ async def ingest_csv(filepath: str, filename: str, job_id: str = None) -> dict:
         if batch_docs:
             await update_job_status(job_id, "processing", f"Vectorizing remaining CSV rows ({total_rows}/{total_rows})...")
             texts = [doc["text"] for doc in batch_docs]
-            vectors = embed_model.encode(texts)
+            vectors = await run_in_threadpool(embed_model.encode, texts)
             vectors = vectors.tolist()
             for doc, vector in zip(batch_docs, vectors): 
                 doc["embedding"] = vector
@@ -237,7 +237,7 @@ async def ingest_text(filepath: str, filename: str, job_id: str = None) -> dict:
                 processed = index + 1
                 await update_job_status(job_id, "processing", f"Vectorizing text chunks ({processed}/{total_chunks})...")
                 texts = [doc["text"] for doc in batch_docs]
-                vectors = embed_model.encode(texts)
+                vectors = await run_in_threadpool(embed_model.encode, texts)
                 vectors = vectors.tolist()
 
                 for doc, vector in zip(batch_docs, vectors):
@@ -252,7 +252,7 @@ async def ingest_text(filepath: str, filename: str, job_id: str = None) -> dict:
         if batch_docs:
             await update_job_status(job_id, "processing", f"Vectorizing remaining text chunks ({total_chunks}/{total_chunks})...")
             texts = [doc["text"] for doc in batch_docs]
-            vectors = embed_model.encode(texts)
+            vectors = await run_in_threadpool(embed_model.encode, texts)
             vectors = vectors.tolist()
             for doc, vector in zip(batch_docs, vectors):
                 doc["embedding"] = vector
