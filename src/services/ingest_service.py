@@ -14,7 +14,7 @@ from core.models import embed_model
 # Number of texts sent to the model in one forward pass.
 # 16 is the sweet-spot for harrier-270M on a single vCPU: it amortises the
 # attention overhead without blowing the activation memory budget.
-EMBED_BATCH = 16
+EMBED_BATCH = 4 
 
 # ---------------------------------------------------------------------------
 # Job status helper
