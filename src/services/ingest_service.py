@@ -1,6 +1,7 @@
 import os
 import sys
 import datetime
+import asyncio
 import re
 import polars as pl
 from llama_cloud import LlamaCloud
@@ -101,6 +102,7 @@ async def ingest_pdf(filepath: str, filename: str, job_id: str = None) -> dict:
                     
                 await col_knowledge.insert_many(sub_batch)
                 upload_count += len(sub_batch)
+                await asyncio.sleep(0.05)
 
         msg = f"Completed: Successfully indexed {upload_count} pages."
         await update_job_status(job_id, "completed", msg)
@@ -151,6 +153,7 @@ async def ingest_csv(filepath: str, filename: str, job_id: str = None) -> dict:
                 await col_knowledge.insert_many(batch_docs)
                 upload_count += len(batch_docs)
                 batch_docs = []
+                await asyncio.sleep(0.05)
                 
         if batch_docs:
             await update_job_status(job_id, "processing", f"Vectorizing remaining CSV rows ({total_rows}/{total_rows})...")
@@ -243,6 +246,7 @@ async def ingest_text(filepath: str, filename: str, job_id: str = None) -> dict:
                 await col_knowledge.insert_many(batch_docs)
                 upload_count += len(batch_docs)
                 batch_docs = []
+                await asyncio.sleep(0.05)
 
         # Process remaining batch
         if batch_docs:
