@@ -44,7 +44,7 @@ async def ingest_pdf(filepath: str, filename: str, job_id: str = None) -> dict:
             
         llama_client = LlamaCloud(api_key=LLAMA_INDEX_API_KEY)
         
-        existing_files = llama_client.files.list()
+        existing_files = await run_in_threadpool(llama_client.files.list)
         file_obj = None
         for f in existing_files:
             f_name = getattr(f, 'name', getattr(f, 'file_name', ''))
@@ -55,11 +55,15 @@ async def ingest_pdf(filepath: str, filename: str, job_id: str = None) -> dict:
 
         if not file_obj:
             await update_job_status(job_id, "processing", "Uploading PDF to LlamaCloud...")
-            file_obj = llama_client.files.create(file=filepath, purpose="parse")
+            file_obj = await run_in_threadpool(llama_client.files.create, file=filepath, purpose="parse")
         
         await update_job_status(job_id, "processing", "LlamaCloud parsing PDF (this can take 1-2 minutes)...")
-        result = llama_client.parsing.parse(
-            file_id=file_obj.id, tier="agentic", version="latest", expand=["markdown"]
+        result = await run_in_threadpool(
+            llama_client.parsing.parse,
+            file_id=file_obj.id,
+            tier="agentic",
+            version="latest",
+            expand=["markdown"]
         )
         
         upload_count = 0
@@ -118,7 +122,7 @@ async def ingest_csv(filepath: str, filename: str, job_id: str = None) -> dict:
             return {"status": "skipped", "message": msg}
 
         await update_job_status(job_id, "processing", "Reading CSV data...")
-        df = pl.read_csv(filepath, null_values=[""]).fill_null("") 
+        df = await run_in_threadpool(lambda: pl.read_csv(filepath, null_values=[""]).fill_null("")) 
         
         upload_count = 0
         batch_docs = []
@@ -177,8 +181,7 @@ async def ingest_text(filepath: str, filename: str, job_id: str = None) -> dict:
             return {"status": "skipped", "message": msg}
 
         await update_job_status(job_id, "processing", "Reading text data...")
-        with open(filepath, 'r', encoding='utf-8') as f:
-            content = f.read()
+        content = await run_in_threadpool(lambda: open(filepath, 'r', encoding='utf-8').read())
             
         # ------------------------------------------------------------
         # Determine chunking strategy based on filename

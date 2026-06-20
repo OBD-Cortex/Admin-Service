@@ -4,35 +4,48 @@ import shutil
 import tempfile
 import datetime
 import logging
+import asyncio
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, BackgroundTasks
 from fastapi.concurrency import run_in_threadpool
 
 from core.database import col_jobs
 from core.auth import verify_admin_jwt
-from services.ingest_service import ingest_pdf, ingest_csv, ingest_text
+from services.ingest_service import ingest_pdf, ingest_csv, ingest_text, update_job_status
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/ingest", tags=["Ingestion"])
 
+# Concurrency gate: allow only 1 ingestion job at a time on this single-vCPU server
+_ingest_semaphore = asyncio.Semaphore(1)
+
 async def process_ingestion_background(job_id: str, temp_path: str, filename: str):
     """Worker task that runs the ingestion service in a background thread."""
-    try:
-        if filename.endswith(".pdf"):
-            await ingest_pdf(temp_path, filename, job_id=job_id)
-        elif filename.endswith(".csv"):
-            await ingest_csv(temp_path, filename, job_id=job_id)
-        elif filename.endswith(".md") or filename.endswith(".txt"):
-            await ingest_text(temp_path, filename, job_id=job_id)
-    except Exception as e:
-        logger.error(f"[!] Background Ingestion Task Failed for Job {job_id}: {e}")
-    finally:
-        # Guarantee cleanup of temporary uploaded file
-        if os.path.exists(temp_path):
+    acquired = _ingest_semaphore.locked()
+    if acquired:
+        await update_job_status(job_id, "queued", "Waiting for current ingestion to finish...")
+        
+    async with _ingest_semaphore:
+        try:
+            if filename.endswith(".pdf"):
+                await ingest_pdf(temp_path, filename, job_id=job_id)
+            elif filename.endswith(".csv"):
+                await ingest_csv(temp_path, filename, job_id=job_id)
+            elif filename.endswith(".md") or filename.endswith(".txt"):
+                await ingest_text(temp_path, filename, job_id=job_id)
+        except Exception as e:
+            logger.error(f"[!] Background Ingestion Task Failed for Job {job_id}: {e}")
             try:
-                os.remove(temp_path)
-            except Exception as cleanup_err:
-                logger.warning(f"[!] Warning: Failed to delete temp file {temp_path}: {cleanup_err}")
+                await update_job_status(job_id, "failed", error=str(e))
+            except Exception as db_err:
+                logger.error(f"Failed to update job status to failed: {db_err}")
+        finally:
+            # Guarantee cleanup of temporary uploaded file
+            if os.path.exists(temp_path):
+                try:
+                    os.remove(temp_path)
+                except Exception as cleanup_err:
+                    logger.warning(f"[!] Warning: Failed to delete temp file {temp_path}: {cleanup_err}")
 
 @router.post("")
 async def start_ingestion_job(

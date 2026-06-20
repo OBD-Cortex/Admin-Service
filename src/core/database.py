@@ -119,4 +119,16 @@ async def init_db():
     except Exception as e:
         logger.warning(f"[!] Warning: Could not create index on col_devices.created_at: {e}")
 
+    # Create index on source field in col_knowledge for fast deduplication lookups
+    try:
+        await col_knowledge.create_index("source")
+    except Exception as e:
+        logger.warning(f"[!] Warning: Could not create index on col_knowledge.source: {e}")
+
+    # Create TTL index on created_at in col_jobs to auto-delete jobs after 24 hours (86400 seconds)
+    try:
+        await col_jobs.create_index("created_at", expireAfterSeconds=86400)
+    except Exception as e:
+        logger.warning(f"[!] Warning: Could not create TTL index on col_jobs.created_at: {e}")
+
     logger.info("[✓] Database Indexes Verified.")
