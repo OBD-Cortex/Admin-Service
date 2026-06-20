@@ -4,6 +4,7 @@ import datetime
 import re
 import polars as pl
 from llama_cloud import LlamaCloud
+from fastapi.concurrency import run_in_threadpool
 
 from core.config import LLAMA_INDEX_API_KEY
 from core.database import col_knowledge, col_jobs
@@ -82,7 +83,8 @@ async def ingest_pdf(filepath: str, filename: str, job_id: str = None) -> dict:
         if batch_docs:
             await update_job_status(job_id, "processing", f"Vectorizing {len(batch_docs)} pages (generating 640D embeddings)...")
             texts = [doc["text"] for doc in batch_docs]
-            vectors = embed_model.encode(texts).tolist() 
+            vectors = await run_in_threadpool(embed_model.encode, texts)
+            vectors = vectors.tolist()
             
             for doc, vector in zip(batch_docs, vectors):
                 doc["embedding"] = vector
@@ -130,7 +132,8 @@ async def ingest_csv(filepath: str, filename: str, job_id: str = None) -> dict:
                 processed = index + 1
                 await update_job_status(job_id, "processing", f"Vectorizing CSV rows ({processed}/{total_rows})...")
                 texts = [doc["text"] for doc in batch_docs]
-                vectors = embed_model.encode(texts).tolist()
+                vectors = await run_in_threadpool(embed_model.encode, texts)
+                vectors = vectors.tolist()
                 
                 for doc, vector in zip(batch_docs, vectors):
                     doc["embedding"] = vector
@@ -142,7 +145,8 @@ async def ingest_csv(filepath: str, filename: str, job_id: str = None) -> dict:
         if batch_docs:
             await update_job_status(job_id, "processing", f"Vectorizing remaining CSV rows ({total_rows}/{total_rows})...")
             texts = [doc["text"] for doc in batch_docs]
-            vectors = embed_model.encode(texts).tolist()
+            vectors = await run_in_threadpool(embed_model.encode, texts)
+            vectors = vectors.tolist()
             for doc, vector in zip(batch_docs, vectors): 
                 doc["embedding"] = vector
             await col_knowledge.insert_many(batch_docs)
@@ -221,7 +225,8 @@ async def ingest_text(filepath: str, filename: str, job_id: str = None) -> dict:
                 processed = index + 1
                 await update_job_status(job_id, "processing", f"Vectorizing text chunks ({processed}/{total_chunks})...")
                 texts = [doc["text"] for doc in batch_docs]
-                vectors = embed_model.encode(texts).tolist()
+                vectors = await run_in_threadpool(embed_model.encode, texts)
+                vectors = vectors.tolist()
 
                 for doc, vector in zip(batch_docs, vectors):
                     doc["embedding"] = vector
@@ -234,7 +239,8 @@ async def ingest_text(filepath: str, filename: str, job_id: str = None) -> dict:
         if batch_docs:
             await update_job_status(job_id, "processing", f"Vectorizing remaining text chunks ({total_chunks}/{total_chunks})...")
             texts = [doc["text"] for doc in batch_docs]
-            vectors = embed_model.encode(texts).tolist()
+            vectors = await run_in_threadpool(embed_model.encode, texts)
+            vectors = vectors.tolist()
             for doc, vector in zip(batch_docs, vectors):
                 doc["embedding"] = vector
             await col_knowledge.insert_many(batch_docs)
