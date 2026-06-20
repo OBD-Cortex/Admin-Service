@@ -83,17 +83,17 @@ async def ingest_pdf(filepath: str, filename: str, job_id: str = None) -> dict:
                 "doc_type": "repair_manual"
             })
 
-        # Step 2: Batch Encode and Bulk Insert in chunks of 16 to avoid memory exhaustion
+        # Step 2: Batch Encode and Bulk Insert in chunks of 4 to avoid memory exhaustion
         if batch_docs:
             total_pages = len(batch_docs)
-            sub_batch_size = 16
+            sub_batch_size = 4
             for idx in range(0, total_pages, sub_batch_size):
                 sub_batch = batch_docs[idx : idx + sub_batch_size]
                 processed = min(idx + sub_batch_size, total_pages)
                 await update_job_status(job_id, "processing", f"Vectorizing pages ({processed}/{total_pages})...")
                 
                 texts = [doc["text"] for doc in sub_batch]
-                vectors = await run_in_threadpool(embed_model.encode, texts)
+                vectors = embed_model.encode(texts)
                 vectors = vectors.tolist()
                 
                 for doc, vector in zip(sub_batch, vectors):
@@ -126,7 +126,7 @@ async def ingest_csv(filepath: str, filename: str, job_id: str = None) -> dict:
         
         upload_count = 0
         batch_docs = []
-        batch_size = 16
+        batch_size = 4
         total_rows = len(df)
         
         for index, row in enumerate(df.iter_rows(named=True)):
@@ -142,7 +142,7 @@ async def ingest_csv(filepath: str, filename: str, job_id: str = None) -> dict:
                 processed = index + 1
                 await update_job_status(job_id, "processing", f"Vectorizing CSV rows ({processed}/{total_rows})...")
                 texts = [doc["text"] for doc in batch_docs]
-                vectors = await run_in_threadpool(embed_model.encode, texts)
+                vectors = embed_model.encode(texts)
                 vectors = vectors.tolist()
                 
                 for doc, vector in zip(batch_docs, vectors):
@@ -155,7 +155,7 @@ async def ingest_csv(filepath: str, filename: str, job_id: str = None) -> dict:
         if batch_docs:
             await update_job_status(job_id, "processing", f"Vectorizing remaining CSV rows ({total_rows}/{total_rows})...")
             texts = [doc["text"] for doc in batch_docs]
-            vectors = await run_in_threadpool(embed_model.encode, texts)
+            vectors = embed_model.encode(texts)
             vectors = vectors.tolist()
             for doc, vector in zip(batch_docs, vectors): 
                 doc["embedding"] = vector
@@ -220,7 +220,7 @@ async def ingest_text(filepath: str, filename: str, job_id: str = None) -> dict:
         total_chunks = len(chunks)
         upload_count = 0
         batch_docs = []
-        batch_size = 16
+        batch_size = 4
 
         for index, chunk_text in enumerate(chunks):
             batch_docs.append({
@@ -234,7 +234,7 @@ async def ingest_text(filepath: str, filename: str, job_id: str = None) -> dict:
                 processed = index + 1
                 await update_job_status(job_id, "processing", f"Vectorizing text chunks ({processed}/{total_chunks})...")
                 texts = [doc["text"] for doc in batch_docs]
-                vectors = await run_in_threadpool(embed_model.encode, texts)
+                vectors = embed_model.encode(texts)
                 vectors = vectors.tolist()
 
                 for doc, vector in zip(batch_docs, vectors):
@@ -248,7 +248,7 @@ async def ingest_text(filepath: str, filename: str, job_id: str = None) -> dict:
         if batch_docs:
             await update_job_status(job_id, "processing", f"Vectorizing remaining text chunks ({total_chunks}/{total_chunks})...")
             texts = [doc["text"] for doc in batch_docs]
-            vectors = await run_in_threadpool(embed_model.encode, texts)
+            vectors = embed_model.encode(texts)
             vectors = vectors.tolist()
             for doc, vector in zip(batch_docs, vectors):
                 doc["embedding"] = vector
