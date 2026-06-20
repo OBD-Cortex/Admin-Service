@@ -14,3 +14,4 @@ llama-cloud
 # Utilities
 python-dotenv
 polars
+httpx
