@@ -79,18 +79,24 @@ async def ingest_pdf(filepath: str, filename: str, job_id: str = None) -> dict:
                 "doc_type": "repair_manual"
             })
 
-        # Step 2: Batch Encode and Bulk Insert
+        # Step 2: Batch Encode and Bulk Insert in chunks of 16 to avoid memory exhaustion
         if batch_docs:
-            await update_job_status(job_id, "processing", f"Vectorizing {len(batch_docs)} pages (generating 640D embeddings)...")
-            texts = [doc["text"] for doc in batch_docs]
-            vectors = await run_in_threadpool(embed_model.encode, texts)
-            vectors = vectors.tolist()
-            
-            for doc, vector in zip(batch_docs, vectors):
-                doc["embedding"] = vector
+            total_pages = len(batch_docs)
+            sub_batch_size = 16
+            for idx in range(0, total_pages, sub_batch_size):
+                sub_batch = batch_docs[idx : idx + sub_batch_size]
+                processed = min(idx + sub_batch_size, total_pages)
+                await update_job_status(job_id, "processing", f"Vectorizing pages ({processed}/{total_pages})...")
                 
-            await col_knowledge.insert_many(batch_docs)
-            upload_count += len(batch_docs)
+                texts = [doc["text"] for doc in sub_batch]
+                vectors = await run_in_threadpool(embed_model.encode, texts)
+                vectors = vectors.tolist()
+                
+                for doc, vector in zip(sub_batch, vectors):
+                    doc["embedding"] = vector
+                    
+                await col_knowledge.insert_many(sub_batch)
+                upload_count += len(sub_batch)
 
         msg = f"Completed: Successfully indexed {upload_count} pages."
         await update_job_status(job_id, "completed", msg)
@@ -116,7 +122,7 @@ async def ingest_csv(filepath: str, filename: str, job_id: str = None) -> dict:
         
         upload_count = 0
         batch_docs = []
-        batch_size = 256
+        batch_size = 16
         total_rows = len(df)
         
         for index, row in enumerate(df.iter_rows(named=True)):
@@ -211,7 +217,7 @@ async def ingest_text(filepath: str, filename: str, job_id: str = None) -> dict:
         total_chunks = len(chunks)
         upload_count = 0
         batch_docs = []
-        batch_size = 256
+        batch_size = 16
 
         for index, chunk_text in enumerate(chunks):
             batch_docs.append({
