@@ -10,6 +10,10 @@ logger = logging.getLogger(__name__)
 # Suppress the verbose HTTP request logs from huggingface_hub's underlying httpx client
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
+import torch
+torch.set_num_threads(1)
+torch.set_num_interop_threads(1)
+
 logger.info("Loading local SentenceTransformer model (microsoft/harrier-oss-v1-270m)...")
 try:
     # Attempt to load entirely from the local cache without checking for updates online
