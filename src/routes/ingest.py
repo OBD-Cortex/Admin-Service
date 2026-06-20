@@ -19,33 +19,46 @@ router = APIRouter(prefix="/api/ingest", tags=["Ingestion"])
 # Concurrency gate: allow only 1 ingestion job at a time on this single-vCPU server
 _ingest_semaphore = asyncio.Semaphore(1)
 
+# Keep track of active ingestion asyncio Tasks so they can be cancelled if requested
+_active_tasks: dict[str, asyncio.Task] = {}
+
 async def process_ingestion_background(job_id: str, temp_path: str, filename: str):
     """Worker task that runs the ingestion service in a background thread."""
+    _active_tasks[job_id] = asyncio.current_task()
+    
     acquired = _ingest_semaphore.locked()
     if acquired:
         await update_job_status(job_id, "queued", "Waiting for current ingestion to finish...")
         
-    async with _ingest_semaphore:
-        try:
+    try:
+        async with _ingest_semaphore:
             if filename.endswith(".pdf"):
                 await ingest_pdf(temp_path, filename, job_id=job_id)
             elif filename.endswith(".csv"):
                 await ingest_csv(temp_path, filename, job_id=job_id)
             elif filename.endswith(".md") or filename.endswith(".txt"):
                 await ingest_text(temp_path, filename, job_id=job_id)
-        except Exception as e:
-            logger.error(f"[!] Background Ingestion Task Failed for Job {job_id}: {e}")
+    except asyncio.CancelledError:
+        logger.info(f"[-] Ingestion Job {job_id} was explicitly cancelled by the admin.")
+        try:
+            await update_job_status(job_id, "failed", error="Ingestion cancelled by user")
+        except Exception as db_err:
+            logger.error(f"Failed to update job status to cancelled: {db_err}")
+        raise
+    except Exception as e:
+        logger.error(f"[!] Background Ingestion Task Failed for Job {job_id}: {e}")
+        try:
+            await update_job_status(job_id, "failed", error=str(e))
+        except Exception as db_err:
+            logger.error(f"Failed to update job status to failed: {db_err}")
+    finally:
+        _active_tasks.pop(job_id, None)
+        # Guarantee cleanup of temporary uploaded file
+        if os.path.exists(temp_path):
             try:
-                await update_job_status(job_id, "failed", error=str(e))
-            except Exception as db_err:
-                logger.error(f"Failed to update job status to failed: {db_err}")
-        finally:
-            # Guarantee cleanup of temporary uploaded file
-            if os.path.exists(temp_path):
-                try:
-                    os.remove(temp_path)
-                except Exception as cleanup_err:
-                    logger.warning(f"[!] Warning: Failed to delete temp file {temp_path}: {cleanup_err}")
+                os.remove(temp_path)
+            except Exception as cleanup_err:
+                logger.warning(f"[!] Warning: Failed to delete temp file {temp_path}: {cleanup_err}")
 
 @router.post("")
 async def start_ingestion_job(
@@ -105,3 +118,24 @@ async def get_ingestion_status(job_id: str, admin: dict = Depends(verify_admin_j
         "error_message": job_doc.get("error_message"),
         "updated_at": job_doc.get("updated_at")
     }
+
+@router.post("/cancel/{job_id}")
+async def cancel_ingestion_job(job_id: str, admin: dict = Depends(verify_admin_jwt)):
+    """Cancels an active background ingestion job."""
+    job_doc = await col_jobs.find_one({"_id": job_id})
+    if not job_doc:
+        raise HTTPException(status_code=404, detail="Job ID not found.")
+    
+    # Check if task is active in this worker instance
+    task = _active_tasks.get(job_id)
+    if task:
+        task.cancel()
+        return {"job_id": job_id, "status": "cancelling"}
+    
+    # If the job status in DB is queued or processing but task is not in memory (e.g. server restarted)
+    # update status to failed directly
+    if job_doc.get("status") in ["queued", "processing"]:
+        await update_job_status(job_id, "failed", error="Ingestion cancelled by user")
+        return {"job_id": job_id, "status": "cancelled"}
+        
+    return {"job_id": job_id, "status": job_doc.get("status"), "message": "Job is not active."}
